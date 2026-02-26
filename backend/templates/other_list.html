@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Other Devices - List</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <div class="header-with-logo">
+        <h1>Other Devices</h1>
+        <img src="/static/images/logoc.png" alt="Logo" class="logo">
+      </div>
+      <div class="actions">
+        <a class="btn" href="/other-devices/add">Add device</a>
+        <a class="btn" href="/other-devices/borrowed" style="margin-left:8px">Return Device</a>
+        <a class="btn" href="/other-devices/status" style="margin-left:8px">Show borrow status</a>
+        <a class="btn" href="/" style="margin-left:8px;background:#ffeb3b;color:#000">Main</a>
+      </div>
+      <table>
+        <thead><tr><th>Device</th><th>Category</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+        {% for d in devices %}
+          <tr>
+            <td>{{ d.name }}</td>
+            <td>{{ d.category or '-' }}</td>
+            <td>
+              {% if d.is_borrowed %}
+                Borrowed by {{ d.borrower }}
+                {% if d.due_date %}<br/>Due: {{ d.due_date }}{% endif %}
+              {% else %}
+                Available
+              {% endif %}
+            </td>
+            <td>
+              {% if d.is_borrowed %}
+                <a class="btn" href="/other-devices/manage/{{ d.id }}">Return</a>
+              {% else %}
+                <a class="btn" href="/other-devices/manage/{{ d.id }}">Borrow</a>
+                <form method="post" action="/other-devices/delete/{{ d.id }}" style="display:inline;margin-left:6px;" onsubmit="return confirm('Delete device {{ d.name }}? This cannot be undone.');">
+                  <button type="submit" class="btn danger">Delete</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

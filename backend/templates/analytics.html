@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Analytics - Device Borrowing</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <main class="container">
+      <div class="header-with-logo">
+        <h1>Analytics</h1>
+        <a class="btn" href="/">Back</a>
+      </div>
+
+      <section>
+        <h2>Summary</h2>
+        <div style="display:flex;gap:20px;flex-wrap:wrap">
+          <div style="padding:12px;border-radius:8px;background:#f3f6ff;min-width:160px">
+            <strong>Total borrows:</strong>
+            <div style="font-size:24px">{{ total_borrows }}</div>
+          </div>
+          <div style="padding:12px;border-radius:8px;background:#f3fff6;min-width:160px">
+            <strong>Avg duration (days):</strong>
+            <div style="font-size:24px">{{ avg_duration_days if avg_duration_days is not none else '—' }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section style="margin-top:18px">
+        <h2>Top borrowers</h2>
+        {% if top_borrowers %}
+        <div style="position:relative;height:300px;max-width:600px">
+          <canvas id="topBorrowersChart"></canvas>
+        </div>
+        {% else %}
+        <p style="color:#999;font-style:italic">No borrowing data yet</p>
+        {% endif %}
+        <table style="margin-top:12px">
+          <thead><tr><th>Borrower</th><th>Times</th></tr></thead>
+          <tbody>
+            {% for b in top_borrowers %}
+            <tr><td>{{ b.borrower }}</td><td>{{ b.count }}</td></tr>
+            {% else %}
+            <tr><td colspan="2" style="text-align:center;color:#999">No data</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section style="margin-top:18px">
+        <h2>Most borrowed devices</h2>
+        {% if per_device %}
+        <div style="position:relative;height:300px;max-width:600px">
+          <canvas id="devicesChart"></canvas>
+        </div>
+        {% else %}
+        <p style="color:#999;font-style:italic">No borrowing data yet</p>
+        {% endif %}
+        <table style="margin-top:12px">
+          <thead><tr><th>Device</th><th>Times</th></tr></thead>
+          <tbody>
+            {% for d in per_device %}
+            <tr><td>{{ d.name }}</td><td>{{ d.count }}</td></tr>
+            {% else %}
+            <tr><td colspan="2" style="text-align:center;color:#999">No data</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+    </main>
+
+    <script>
+      // Chart.js default options for better scaling
+      Chart.defaults.font.size = 12;
+
+      // Top borrowers chart
+      const topBorrowersData = {{ top_borrowers|map(attribute='borrower')|list|tojson }};
+      const topBorrowersCounts = {{ top_borrowers|map(attribute='count')|list|tojson }};
+      if (topBorrowersData.length > 0) {
+        new Chart(document.getElementById('topBorrowersChart'), {
+          type: 'bar',
+          data: {
+            labels: topBorrowersData,
+            datasets: [{ label: 'Times Borrowed', data: topBorrowersCounts, backgroundColor: 'rgba(3,102,214,0.8)'}]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+              x: { beginAtZero: true, ticks: {stepSize: 1} }
+            }
+          }
+        });
+      }
+
+      // Devices chart
+      const devicesLabels = {{ per_device|map(attribute='name')|list|tojson }};
+      const devicesCounts = {{ per_device|map(attribute='count')|list|tojson }};
+      if (devicesLabels.length > 0) {
+        new Chart(document.getElementById('devicesChart'), {
+          type: 'bar',
+          data: {
+            labels: devicesLabels,
+            datasets: [{label: 'Times Borrowed', data: devicesCounts, backgroundColor: 'rgba(76,175,80,0.8)'}]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+              x: { beginAtZero: true, ticks: {stepSize: 1} }
+            }
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

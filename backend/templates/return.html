@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Return {{ laptop.name }}</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Return {{ laptop.name }}</h1>
+      <form method="post">
+        <label for="observation">Observation (optional)</label>
+        <textarea id="observation" name="observation" rows="4"></textarea>
+        <div class="actions">
+          <button type="submit">Confirm Return</button>
+          <a href="/">Cancel</a>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>

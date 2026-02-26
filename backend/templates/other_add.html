@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Add Other Device</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Add Device</h1>
+      <form method="post">
+        <label for="name">Device name</label>
+        <input id="name" name="name" required />
+        <label for="category">Category (optional)</label>
+        <input id="category" name="category" />
+        <div class="actions">
+          <button type="submit">Add</button>
+          <a href="/other-devices">Cancel</a>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>

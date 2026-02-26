@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Device Borrowing System</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <div class="header-with-logo">
+        <h1>Device Borrowing System</h1>
+        <img src="/static/images/logoc.png" alt="Logo" class="logo">
+      </div>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul class="flashes">
+          {% for category, msg in messages %}
+            <li class="flash {{ category }}">{{ msg }}</li>
+          {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
+
+  <div class="actions">
+    <a class="btn" href="/active-loans">Active loans</a>
+    <a class="btn" href="/analytics" style="margin-left:8px;background:#4caf50">Analytics</a>
+    <a class="btn" href="/other-devices" style="margin-left:8px;background:#2196F3">Other devices</a>
+  </div>
+      <table>
+        <thead>
+          <tr><th>Device</th><th>Status</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+        {% for l in laptops %}
+          <tr>
+            <td>{{ l.name }}</td>
+            <td>
+              {% if l.is_borrowed %}
+                Borrowed by {{ l.borrower }}<br />
+                {% if l.days_text %}
+                  <span class="badge {{ l.days_badge }}">{{ l.days_text }}</span>
+                {% elif l.due_date %}
+                  Due: {{ l.due_date }}
+                {% endif %}
+              {% else %}
+                Available
+              {% endif %}
+            </td>
+            <td>
+              {% if l.is_borrowed %}
+                <form method="post" action="/return/{{ l.id }}">
+                  <button type="submit">Return</button>
+                </form>
+              {% else %}
+                <a class="btn" href="/borrow/{{ l.id }}">Borrow</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

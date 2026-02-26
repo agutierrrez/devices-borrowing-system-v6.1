@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Borrow {{ device.name }}</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Borrow {{ device.name }}</h1>
+      <form method="post">
+        <label for="name">Your name</label>
+        <input id="name" name="name" required />
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" />
+        <label for="days">Borrowed time (days)</label>
+        <input id="days" name="days" type="number" min="0" max="365" value="7" />
+        <div class="actions">
+          <button type="submit">Confirm Borrow</button>
+          <a href="/other-devices">Cancel</a>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>

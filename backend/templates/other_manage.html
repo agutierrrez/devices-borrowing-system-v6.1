@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ device.name }}</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>{{ device.name }}</h1>
+      <form method="post">
+        {% if device.is_borrowed %}
+          {# Return form #}
+          <p><strong>Status:</strong> Borrowed by {{ device.borrower }}</p>
+          {% if device.due_date %}<p><strong>Due date:</strong> {{ device.due_date }}</p>{% endif %}
+          <label for="observation">Observation (optional)</label>
+          <textarea id="observation" name="observation" rows="4"></textarea>
+          <div class="actions">
+            <button type="submit">Return Device</button>
+            <a href="/other-devices/borrowed">Cancel</a>
+          </div>
+        {% else %}
+          {# Borrow form #}
+          <p><strong>Status:</strong> Available</p>
+          <label for="name">Your name</label>
+          <input id="name" name="name" required />
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" />
+          <label for="days">Borrowed time (days)</label>
+          <input id="days" name="days" type="number" min="0" max="365" value="7" />
+          <div class="actions">
+            <button type="submit">Borrow Device</button>
+            <a href="/other-devices">Cancel</a>
+          </div>
+        {% endif %}
+      </form>
+    </main>
+  </body>
+</html>

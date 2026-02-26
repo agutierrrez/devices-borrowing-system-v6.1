@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Active Loans</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Active Loans</h1>
+      <p><a class="btn" href="/">Back to devices</a></p>
+
+      {% if laptops and laptops|length > 0 %}
+      <table>
+        <thead>
+          <tr><th>Device</th><th>Borrower</th><th>Due</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+        {% for l in laptops %}
+          <tr>
+            <td>{{ l.name }}</td>
+            <td>{{ l.borrower }}{% if l.borrower_email %} ({{ l.borrower_email }}){% endif %}</td>
+            <td>
+              {% if l.days_text %}
+                <span class="badge {{ l.days_badge }}">{{ l.days_text }}</span>
+              {% elif l.due_date %}
+                {{ l.due_date|datetimeformat }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              <form method="post" action="/return/{{ l.id }}">
+                <button type="submit">Return</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <p>No active loans.</p>
+      {% endif %}
+    </main>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Other Devices - Borrow Status</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Borrow Status (Other Devices)</h1>
+      <div class="actions">
+        <a class="btn" href="/other-devices">Back</a>
+      </div>
+      <table>
+        <thead><tr><th>ID</th><th>Device</th><th>Borrower</th><th>Borrowed At</th><th>Returned At</th><th>Observation</th></tr></thead>
+        <tbody>
+        {% for r in rows %}
+          <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.device.name if r.device else ('#'+(r.device_id|string)) }}</td>
+            <td>{{ r.borrower }}</td>
+            <td>{{ r.borrowed_at }}</td>
+            <td>{{ r.returned_at or '-' }}</td>
+            <td>{{ r.observation or '-' }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>

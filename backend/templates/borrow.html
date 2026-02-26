@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Borrow {{ laptop.name }}</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Borrow {{ laptop.name }}</h1>
+      <form method="post">
+        <label for="name">Your name</label>
+        <input id="name" name="name" required />
+  <label for="days">Borrow days (optional, default 7)</label>
+  <input id="days" name="days" type="number" min="0" placeholder="7" />
+  <label for="email">Email (optional, used for notifications)</label>
+  <input id="email" name="email" type="email" placeholder="student@example.edu" />
+        <div class="actions">
+          <button type="submit">Confirm Borrow</button>
+          <a href="/">Cancel</a>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>
