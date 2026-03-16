@@ -1,7 +1,7 @@
-from backend import app, db
-from backend.models import Laptop
+from . import app, db
+from .models import Laptop
 import os
-from backend.models import BorrowHistory, OtherDevice, OtherDeviceHistory
+from .models import BorrowHistory, OtherDevice, OtherDeviceHistory
 
 
 def init_db():

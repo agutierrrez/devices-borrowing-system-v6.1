@@ -1,4 +1,4 @@
-from backend import db
+from . import db
 from datetime import datetime
 
 
@@ -16,8 +16,7 @@ class Laptop(db.Model):
 
     @property
     def history(self):
-        from backend.models import BorrowHistory as _BH
-        return _BH.query.filter_by(laptop_id=self.id).order_by(_BH.id).all()
+        return BorrowHistory.query.filter_by(laptop_id=self.id).order_by(BorrowHistory.id).all()
 
 
 

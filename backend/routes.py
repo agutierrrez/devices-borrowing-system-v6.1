@@ -1,6 +1,6 @@
 from flask import render_template, request, redirect, url_for, flash
-from backend import app, db, LIMA
-from backend.models import Laptop, BorrowHistory, OtherDevice, OtherDeviceHistory
+from . import app, db, LIMA
+from .models import Laptop, BorrowHistory, OtherDevice, OtherDeviceHistory
 from datetime import datetime, timedelta
 import math
 

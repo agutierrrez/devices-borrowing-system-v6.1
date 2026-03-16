@@ -23,4 +23,4 @@ except Exception:
 
 db = SQLAlchemy(app)
 
-from backend import routes, models
+from . import routes, models
