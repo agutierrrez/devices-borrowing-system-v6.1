@@ -17,10 +17,20 @@ except Exception:
 import os
 
 app = Flask(__name__, static_folder='backend/static', static_url_path='/static', template_folder='backend/templates')
-# Use an absolute path for the SQLite file by default so relative working-directory
-# differences don't cause "unable to open database file" errors.
-default_db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance', 'laptops.db')
+# 1. Definimos la ruta base del proyecto de forma absoluta
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+# 2. Definimos la ruta de la carpeta 'instance' y nos aseguramos de que exista
+instance_path = os.path.join(basedir, 'instance')
+if not os.path.exists(instance_path):
+    os.makedirs(instance_path)
+
+# 3. Definimos la ruta final del archivo de la base de datos
+default_db_path = os.path.join(instance_path, 'laptops.db')
+
+# 4. Configuramos la URI (el replace es por si vienes de Windows, en PythonAnywhere no estorba)
 default_db_uri = f"sqlite:///{default_db_path.replace('\\', '/')}"
+
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', default_db_uri)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret')
@@ -149,7 +159,7 @@ def index():
             'days_text': days_text,
             'days_badge': days_badge,
         })
-    return render_template('index.html', laptops=items)
+    return render_template('index.html', items=items)
 
 
 # history route removed to revert to pre-history-button state

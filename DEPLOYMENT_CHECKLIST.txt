@@ -1,0 +1,389 @@
+═══════════════════════════════════════════════════════════════════════════════
+  DEVICES BORROWING SYSTEM - PYTHONANYWHERE DEPLOYMENT CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+Print this page or save it for reference during deployment!
+
+═══════════════════════════════════════════════════════════════════════════════
+PHASE 1: LOCAL PREPARATION (DO THESE FIRST ON YOUR COMPUTER)
+═══════════════════════════════════════════════════════════════════════════════
+
+STEP 1: Generate Secret Key
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Run this command in your terminal:                                          │
+│ python -c "import secrets; print(secrets.token_hex(32))"                    │
+│                                                                             │
+│ Copy the output (example: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6...)             │
+│ You'll use this in the .env file                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+Result: ____________________________________________________________________________
+
+STEP 2: Create .env File
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ Copy .env.example to .env (in project root folder)                       │
+│ ☐ Open .env in a text editor                                               │
+│ ☐ Update SECRET_KEY = [paste your generated key from STEP 1]               │
+│ ☐ Set FLASK_ENV = production                                               │
+│ ☐ Set FLASK_DEBUG = 0                                                      │
+│ ☐ Set REQUIRE_BORROWER_EMAIL = 1                                           │
+│ ☐ Save the file                                                             │
+│                                                                             │
+│ IMPORTANT: Do NOT commit this file to Git!                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+STEP 3: Test Locally
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ Activate virtual environment:                                            │
+│   .venv-1\Scripts\Activate.ps1                                              │
+│                                                                             │
+│ ☐ Install dependencies:                                                     │
+│   pip install -r requirements.txt                                           │
+│                                                                             │
+│ ☐ Initialize database:                                                      │
+│   python init_db.py                                                         │
+│                                                                             │
+│ ☐ Run the Flask app:                                                        │
+│   python backend/run.py                                                     │
+│                                                                             │
+│ ☐ Open browser and visit: http://localhost:5000                            │
+│                                                                             │
+│ ☐ Test these features:                                                      │
+│   - Homepage loads with laptop list                                         │
+│   - Can borrow a laptop                                                     │
+│   - Can return a laptop                                                     │
+│   - CSS/images load correctly (check for styling)                           │
+│                                                                             │
+│ ☐ If all works, stop the server (Ctrl+C) and continue                      │
+│ ☐ If any error, check error message and fix before continuing              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+STEP 4: Prepare Git Repository
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ Verify .env is in .gitignore (it should be)                              │
+│ ☐ Verify .venv-1 is in .gitignore (it should be)                           │
+│                                                                             │
+│ Command to check:                                                           │
+│   git status                                                                 │
+│                                                                             │
+│ If .env appears in the list, add it to .gitignore!                         │
+│                                                                             │
+│ ☐ Commit your code to git:                                                  │
+│   git add .                                                                  │
+│   git commit -m "Prepare for PythonAnywhere deployment"                     │
+│                                                                             │
+│ ☐ Push to GitHub:                                                           │
+│   git push origin main                                                      │
+│                                                                             │
+│ Note: Only do this if you have a GitHub repository set up                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+PHASE 2: PYTHONANYWHERE ACCOUNT & UPLOAD
+═══════════════════════════════════════════════════════════════════════════════
+
+STEP 5: Create PythonAnywhere Account
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ Go to https://www.pythonanywhere.com/register/                           │
+│ ☐ Create a free or paid account                                            │
+│ ☐ Note your username: ____________________________                          │
+│   (You'll use this as part of your URL)                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+STEP 6: Upload Code to PythonAnywhere
+
+┌─ Option A: Using Git (Recommended) ────────────────────────────────────────┐
+│                                                                             │
+│ ☐ In PythonAnywhere, open Bash console (Consoles tab → Bash)               │
+│                                                                             │
+│ ☐ Run these commands:                                                       │
+│   cd /home/YOURUSERNAME  (replace YOURUSERNAME with your actual username)  │
+│   git clone https://github.com/YOURNAME/YOUR-REPO.git devices_borrowing   │
+│   (replace YOURNAME and YOUR-REPO with your actual values)                │
+│                                                                             │
+│ ☐ Verify it downloaded:                                                     │
+│   ls devices_borrowing_system/                                              │
+│   (You should see app.py, requirements.txt, etc.)                           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ Option B: Manual Upload ─────────────────────────────────────────────────┐
+│                                                                             │
+│ If you don't have GitHub set up:                                           │
+│                                                                             │
+│ ☐ In PythonAnywhere, go to Files tab                                       │
+│ ☐ Create folder: /home/YOURUSERNAME/devices_borrowing_system              │
+│ ☐ Upload all project files to this folder                                  │
+│ ☐ Make sure to include:                                                     │
+│   - app.py                                                                   │
+│   - wsgi.py                                                                  │
+│   - requirements.txt                                                        │
+│   - .env.example                                                             │
+│   - backend/ folder (with all subfolders)                                   │
+│   - instance/ folder (will be created if missing)                           │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+PHASE 3: VIRTUAL ENVIRONMENT & DEPENDENCIES
+═══════════════════════════════════════════════════════════════════════════════
+
+STEP 7: Create Virtual Environment on PythonAnywhere
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ In PythonAnywhere Bash console, run:                                     │
+│   mkvirtualenv --python=/usr/bin/python3.10 venv                           │
+│                                                                             │
+│ Note: This creates a virtual environment named "venv"                      │
+│       It should be automatically activated (shows (venv) in prompt)         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+STEP 8: Install Dependencies
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ In the same Bash console (with venv activated), run:                     │
+│   cd /home/YOURUSERNAME/devices_borrowing_system                           │
+│   pip install -r requirements.txt                                           │
+│                                                                             │
+│ This will take a few minutes. Wait for it to complete.                    │
+│                                                                             │
+│ ☐ Verify installation:                                                      │
+│   pip list                                                                   │
+│                                                                             │
+│ You should see Flask, SQLAlchemy, etc. in the list                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+PHASE 4: CREATE WEB APP
+═══════════════════════════════════════════════════════════════════════════════
+
+STEP 9: Add Web App on PythonAnywhere
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ In PythonAnywhere, go to Web tab                                         │
+│ ☐ Click "Add a new web app"                                                │
+│ ☐ Choose "Manual configuration"                                            │
+│ ☐ Choose Python 3.10                                                        │
+│                                                                             │
+│ After clicking through, you should see a config page                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+STEP 10: Set Virtualenv Path
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ In the Web tab, find "Virtualenv" field                                  │
+│ ☐ Click the folder icon or edit field                                      │
+│ ☐ Set path to: /home/YOURUSERNAME/.virtualenvs/venv                       │
+│ ☐ Click OK or Save                                                          │
+│                                                                             │
+│ IMPORTANT: Replace YOURUSERNAME with your actual PythonAnywhere username   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+STEP 11: Set Source Code Path
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ In the Web tab, find "Source code" field                                 │
+│ ☐ Change it to: /home/YOURUSERNAME/devices_borrowing_system               │
+│                                                                             │
+│ IMPORTANT: Replace YOURUSERNAME with your actual PythonAnywhere username   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+PHASE 5: CONFIGURE WSGI & ENVIRONMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+STEP 12: Configure WSGI File
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ In the Web tab, click the WSGI configuration file link                   │
+│   (Usually something like /var/www/yourusername_pythonanywhere_com_wsgi.py) │
+│                                                                             │
+│ ☐ When it opens, replace the entire content with this:                     │
+│                                                                             │
+│   ---BEGIN WSGI CONTENT---                                                  │
+│   import sys                                                                 │
+│   import os                                                                  │
+│   from pathlib import Path                                                  │
+│                                                                             │
+│   project_home = '/home/YOURUSERNAME/devices_borrowing_system'             │
+│   if project_home not in sys.path:                                         │
+│       sys.path.insert(0, project_home)                                     │
+│                                                                             │
+│   from dotenv import load_dotenv                                           │
+│   env_path = os.path.join(project_home, '.env')                            │
+│   if os.path.exists(env_path):                                             │
+│       load_dotenv(env_path)                                                │
+│                                                                             │
+│   os.chdir(project_home)                                                    │
+│                                                                             │
+│   instance_dir = os.path.join(project_home, 'instance')                    │
+│   os.makedirs(instance_dir, exist_ok=True)                                 │
+│                                                                             │
+│   from backend import app as application                                   │
+│                                                                             │
+│   if not os.path.exists(os.path.join(instance_dir, 'laptops.db')):        │
+│       try:                                                                   │
+│           from backend.init_db import init_db                              │
+│           with application.app_context():                                  │
+│               init_db()                                                     │
+│       except Exception as e:                                                │
+│           print(f"Warning: Could not initialize database: {e}")            │
+│   ---END WSGI CONTENT---                                                    │
+│                                                                             │
+│ ☐ IMPORTANT: Replace YOURUSERNAME with your actual PythonAnywhere username │
+│                                                                             │
+│ ☐ Click Save                                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+STEP 13: Create .env File on PythonAnywhere
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ In PythonAnywhere Bash console:                                          │
+│   cd /home/YOURUSERNAME/devices_borrowing_system                           │
+│   nano .env                                                                  │
+│                                                                             │
+│ ☐ Paste these lines (fill in your actual values):                          │
+│   FLASK_ENV=production                                                       │
+│   FLASK_DEBUG=0                                                              │
+│   SECRET_KEY=YOUR_SECRET_KEY_FROM_STEP_1                                   │
+│   REQUIRE_BORROWER_EMAIL=1                                                 │
+│                                                                             │
+│ ☐ Save the file:                                                            │
+│   Press Ctrl+X                                                               │
+│   Press Y (yes)                                                              │
+│   Press Enter                                                                │
+│                                                                             │
+│ ☐ Verify it was created:                                                    │
+│   cat .env                                                                   │
+│   (You should see your configuration)                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+STEP 14: Configure Static Files
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ In the Web tab, scroll down to "Static files" section                    │
+│ ☐ Click "Add a new static file mapping"                                    │
+│ ☐ Fill in:                                                                  │
+│   URL: /static/                                                             │
+│   Directory: /home/YOURUSERNAME/devices_borrowing_system/backend/static    │
+│ ☐ Click Add                                                                 │
+│                                                                             │
+│ IMPORTANT: Replace YOURUSERNAME with your actual PythonAnywhere username   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+PHASE 6: DEPLOYMENT & TESTING
+═══════════════════════════════════════════════════════════════════════════════
+
+STEP 15: Reload Web App
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ At the top of the Web tab, click the green "Reload" button               │
+│                                                                             │
+│ Wait for it to complete (usually takes 5-10 seconds)                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+STEP 16: Test Your Application
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ Open your browser and go to:                                             │
+│   https://YOURUSERNAME.pythonanywhere.com                                  │
+│                                                                             │
+│ IMPORTANT: Replace YOURUSERNAME with your actual PythonAnywhere username   │
+│                                                                             │
+│ ☐ Verify:                                                                   │
+│   □ Page loads (you see the laptop list)                                    │
+│   □ Styling looks good (CSS loaded)                                        │
+│   □ Images appear (if there are any)                                        │
+│   □ Can click and interact with the page                                    │
+│   □ Can borrow a laptop                                                     │
+│   □ Can return a laptop                                                     │
+│   □ Can navigate between pages                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+STEP 17: Check Logs for Errors
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ If something doesn't work, check the logs:                               │
+│ ☐ In Web tab, scroll down to "Log files"                                   │
+│ ☐ Click "error.log"                                                         │
+│ ☐ Look at the bottom for recent error messages                             │
+│ ☐ Copy the error and search in your deployment guide                       │
+│   under "Troubleshooting" section                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+PHASE 7: TROUBLESHOOTING (ONLY IF YOU HAVE ERRORS)
+═══════════════════════════════════════════════════════════════════════════════
+
+If you see a 500 error or blank page:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ Check error.log (see STEP 17 above)                                      │
+│ ☐ Common fixes:                                                             │
+│                                                                             │
+│   • WSGI path wrong: Check YOURUSERNAME matches actual username             │
+│   • Virtualenv wrong: Check path is /home/YOURUSERNAME/.virtualenvs/venv   │
+│   • .env not loading: Verify it's in project root                          │
+│   • Import errors: Check all files were uploaded correctly                  │
+│                                                                             │
+│ ☐ If still stuck:                                                           │
+│   - Reload the web app again (green button in Web tab)                      │
+│   - Check error.log again for the latest error                              │
+│   - Search for the error in DEPLOYMENT_PYTHONANYWHERE.md                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+If static files (CSS) aren't loading:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ Check static files mapping (STEP 14)                                     │
+│ ☐ Verify path is absolute: /home/YOURUSERNAME/.../backend/static          │
+│ ☐ Not relative: ../../backend/static (wrong!)                              │
+│ ☐ Reload web app                                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+PHASE 8: ONGOING MAINTENANCE
+═══════════════════════════════════════════════════════════════════════════════
+
+Regular Tasks:
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ☐ Check error logs weekly                                                   │
+│ ☐ Backup database monthly:                                                  │
+│   cd /home/YOURUSERNAME/devices_borrowing_system/instance                  │
+│   cp laptops.db laptops_backup_$(date +%Y%m%d).db                           │
+│                                                                             │
+│ ☐ Update code when you make changes:                                        │
+│   git push (from local machine)                                             │
+│   git pull (in PythonAnywhere Bash)                                         │
+│   Reload web app                                                             │
+│                                                                             │
+│ ☐ Update dependencies if needed:                                            │
+│   pip install --upgrade -r requirements.txt                                 │
+│   Reload web app                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+COMPLETION CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+All of the following should be completed:
+
+☐ Phase 1: Local prep (tested locally, code committed)
+☐ Phase 2: Code uploaded to PythonAnywhere
+☐ Phase 3: Virtual environment created and dependencies installed
+☐ Phase 4: Web app created on PythonAnywhere
+☐ Phase 5: WSGI configured, .env created, static files mapped
+☐ Phase 6: App reloaded and tested successfully
+☐ Phase 7: No errors showing (or errors fixed)
+
+If all boxes are checked, your app is live! 🎉
+
+═══════════════════════════════════════════════════════════════════════════════
+IMPORTANT NOTES & REMINDERS
+═══════════════════════════════════════════════════════════════════════════════
+
+• Always replace YOURUSERNAME with your actual PythonAnywhere username
+• .env file is NOT committed to git (it's in .gitignore)
+• SECRET_KEY must be a strong, random string (generated in STEP 1)
+• WSGI file path must match your actual project location
+• After ANY change, click Reload button in Web tab
+• Check error.log if something doesn't work
+• Static files must have absolute paths
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🎉 Good luck with your deployment!
+
+For more help, see:
+- PYTHONANYWHERE_QUICK_START.md (quick reference)
+- DEPLOYMENT_PYTHONANYWHERE.md (detailed guide)
+- PRODUCTION_CONFIG.md (configuration help)
+
+═══════════════════════════════════════════════════════════════════════════════

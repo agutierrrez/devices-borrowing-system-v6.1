@@ -1,8 +1,9 @@
-from flask import render_template, request, redirect, url_for, flash
+from flask import render_template, request, redirect, url_for, flash, abort
 from . import app, db, LIMA
 from .models import Laptop, BorrowHistory, OtherDevice, OtherDeviceHistory
 from datetime import datetime, timedelta
 import math
+from sqlalchemy import func
 
 
 @app.route('/')
@@ -336,10 +337,128 @@ def other_return(device_id):
     return render_template('other_return.html', device=device)
 
 
+@app.route('/other-devices/manage/<int:device_id>', methods=['GET', 'POST'])
+def other_manage(device_id):
+    device = db.session.get(OtherDevice, device_id)
+    if device is None:
+        abort(404)
+    if request.method == 'POST':
+        if device.is_borrowed:
+            # Return flow
+            observation = request.form.get('observation', '').strip() or None
+            history = OtherDeviceHistory.query.filter_by(device_id=device.id, returned_at=None).order_by(OtherDeviceHistory.id.desc()).first()
+            if history:
+                history.returned_at = datetime.now(LIMA).replace(tzinfo=None)
+                history.observation = observation
+            device.is_borrowed = False
+            device.borrower = None
+            device.borrower_email = None
+            device.borrowed_at = None
+            device.due_date = None
+            db.session.commit()
+            flash(f"{device.name} has been returned.", 'success')
+        else:
+            # Borrow flow
+            name = request.form.get('name', '').strip()
+            email = request.form.get('email', '').strip()
+            days = request.form.get('days', '').strip()
+            if not name:
+                flash('Please provide your name to borrow a device.', 'danger')
+                return redirect(request.url)
+            existing = None
+            if email:
+                existing = OtherDevice.query.filter(OtherDevice.is_borrowed == True).filter(OtherDevice.borrower_email.ilike(email)).first()
+            if not existing:
+                existing = OtherDevice.query.filter(OtherDevice.is_borrowed == True).filter(OtherDevice.borrower.ilike(name)).first()
+            if existing:
+                flash('You already have a borrowed device (return it before borrowing another).', 'warning')
+                return redirect(request.url)
+            device.is_borrowed = True
+            device.borrower = name
+            device.borrower_email = email or None
+            device.borrowed_at = datetime.now(LIMA).replace(tzinfo=None)
+            try:
+                requested_days = int(days) if days else 7
+            except ValueError:
+                flash('Invalid number of days; using default 7.', 'warning')
+                requested_days = 7
+            if requested_days < 0 or requested_days > 365:
+                flash('Requested days must be between 0 and 365.', 'danger')
+                return redirect(request.url)
+            device.due_date = device.borrowed_at + timedelta(days=requested_days)
+            history = OtherDeviceHistory(
+                device_id=device.id,
+                borrower=name,
+                borrower_email=email or None,
+                borrowed_at=device.borrowed_at,
+                requested_days=requested_days
+            )
+            db.session.add(history)
+            db.session.commit()
+            flash(f"{device.name} borrowed by {name}.", 'success')
+        return redirect(url_for('other_devices_menu'))
+    return render_template('other_manage.html', device=device)
+
+
+@app.route('/other-devices/delete/<int:device_id>', methods=['POST'])
+def other_delete(device_id):
+    device = db.session.get(OtherDevice, device_id)
+    if device is None:
+        abort(404)
+    if device.is_borrowed:
+        flash('Cannot delete a device that is currently borrowed.', 'warning')
+        return redirect(url_for('other_available'))
+    name = device.name
+    db.session.delete(device)
+    db.session.commit()
+    flash(f'{name} deleted.', 'success')
+    return redirect(url_for('other_available'))
+
+
 @app.route('/other-devices/status')
 def other_status():
     rows = OtherDeviceHistory.query.order_by(OtherDeviceHistory.id.desc()).limit(200).all()
     return render_template('other_status.html', rows=rows)
+
+
+@app.route('/analytics')
+def analytics():
+    # Total borrows from laptops and other devices
+    laptop_borrows = db.session.query(func.count(BorrowHistory.id)).scalar() or 0
+    other_borrows = db.session.query(func.count(OtherDeviceHistory.id)).scalar() or 0
+    total_borrows = laptop_borrows + other_borrows
+
+    # Avg duration for completed borrows
+    laptop_histories = BorrowHistory.query.filter(BorrowHistory.returned_at.isnot(None)).all()
+    other_histories = OtherDeviceHistory.query.filter(OtherDeviceHistory.returned_at.isnot(None)).all()
+    durations = []
+    for h in laptop_histories + other_histories:
+        if h.returned_at and h.borrowed_at:
+            durations.append((h.returned_at - h.borrowed_at).days)
+    avg_duration_days = sum(durations) / len(durations) if durations else None
+
+    # Top borrowers from both tables
+    laptop_top = db.session.query(
+        BorrowHistory.borrower,
+        func.count(BorrowHistory.id).label('count')
+    ).group_by(BorrowHistory.borrower).order_by(func.count(BorrowHistory.id).desc()).limit(10).all()
+    
+    other_top = db.session.query(
+        OtherDeviceHistory.borrower,
+        func.count(OtherDeviceHistory.id).label('count')
+    ).group_by(OtherDeviceHistory.borrower).order_by(func.count(OtherDeviceHistory.id).desc()).limit(10).all()
+    
+    # Combine and sort
+    all_top = {}
+    for borrower, count in laptop_top:
+        all_top[borrower] = all_top.get(borrower, 0) + count
+    for borrower, count in other_top:
+        all_top[borrower] = all_top.get(borrower, 0) + count
+    
+    top_borrowers = sorted(all_top.items(), key=lambda x: x[1], reverse=True)[:10]
+    top_borrowers = [{'borrower': b, 'count': c} for b, c in top_borrowers]
+
+    return render_template('analytics.html', total_borrows=total_borrows, avg_duration_days=round(avg_duration_days, 1) if avg_duration_days else None, top_borrowers=top_borrowers)
 
 
 # history route removed to revert to previous state
