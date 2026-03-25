@@ -34,7 +34,12 @@ if not os.path.exists(db_folder):
     os.makedirs(db_folder, exist_ok=True)
 
 # Configuramos la base de datos
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
+# 1. Obtenemos la ruta limpia primero (fuera de la f-string)
+clean_path = default_db_path.replace('\\', '/')
+
+# 2. Se la pasamos a la configuración
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{clean_path}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret')
 
