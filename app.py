@@ -23,15 +23,18 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 # 2. Definimos la ruta de la carpeta 'instance' y nos aseguramos de que exista
 instance_path = os.path.join(basedir, 'instance')
 if not os.path.exists(instance_path):
-    os.makedirs(instance_path)
+   import os
 
-# 3. Definimos la ruta final del archivo de la base de datos
-default_db_path = os.path.join(instance_path, 'laptops.db')
+# Forzamos la ruta absoluta real de PythonAnywhere
+db_folder = '/home/jverastegui/devices-borrowing-system-v6.1/instance'
+db_path = os.path.join(db_folder, 'laptops.db')
 
-# 4. Configuramos la URI (el replace es por si vienes de Windows, en PythonAnywhere no estorba)
-default_db_uri = f"sqlite:///{default_db_path.replace('\\', '/')}"
+# Aseguramos que la carpeta exista físicamente
+if not os.path.exists(db_folder):
+    os.makedirs(db_folder, exist_ok=True)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', default_db_uri)
+# Configuramos la base de datos
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret')
 
