@@ -3,50 +3,47 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func, desc
 from datetime import datetime, timezone, timedelta
 import math
+import os
+
+# --- Configuración de Zona Horaria ---
 try:
     from zoneinfo import ZoneInfo
     try:
         LIMA = ZoneInfo('America/Lima')
     except Exception:
-        # tzdata not available in environment; fall back to fixed offset -05:00
         LIMA = timezone(timedelta(hours=-5))
 except Exception:
-    # older Python or zoneinfo unavailable; use fixed offset -05:00
-    from datetime import timezone as _tz
-    LIMA = _tz(timedelta(hours=-5))
-import os
+    LIMA = timezone(timedelta(hours=-5))
 
-app = Flask(__name__, static_folder='backend/static', static_url_path='/static', template_folder='backend/templates')
-# 1. Definimos la ruta base del proyecto de forma absoluta
+app = Flask(__name__, 
+            static_folder='backend/static', 
+            static_url_path='/static', 
+            template_folder='backend/templates')
+
+# --- Configuración de Rutas y Base de Datos ---
+
+# 1. Definimos la ruta base de forma absoluta
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# 2. Definimos la ruta de la carpeta 'instance' y nos aseguramos de que exista
+# 2. Definimos y CREAMOS la carpeta 'instance' si no existe
 instance_path = os.path.join(basedir, 'instance')
 if not os.path.exists(instance_path):
-   import os
+    os.makedirs(instance_path, exist_ok=True)
 
-# Forzamos la ruta absoluta real de PythonAnywhere
-# db_folder = '/home/jverastegui/devices-borrowing-system-v6.1/instance'
-db_folder = instance_path
-db_path = os.path.join(db_folder, 'laptops.db')
+# 3. Definimos la ruta del archivo de la base de datos
+db_path = os.path.join(instance_path, 'laptops.db')
 
-# Aseguramos que la carpeta exista físicamente
-if not os.path.exists(db_folder):
-    os.makedirs(db_folder, exist_ok=True)
-
-# Configuramos la base de datos
-# 1. Obtenemos la ruta limpia primero (fuera de la f-string)
+# 4. Limpiamos la ruta para que use slashes / (importante para Windows/Linux interoperabilidad)
 clean_path = db_path.replace('\\', '/')
 
-# 2. Se la pasamos a la configuración
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{clean_path}"
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# 5. Configuración de SQLAlchemy (Usamos 4 slashes para ruta absoluta en Linux)
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:////{clean_path}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret')
 
 db = SQLAlchemy(app)
 
-# Peru / Lima timezone (LIMA is defined above)
+# --- Modelos (Aquí sigues con tus clases Laptop, BorrowHistory, etc.) ---
 
 
 class Laptop(db.Model):
