@@ -26,7 +26,8 @@ if not os.path.exists(instance_path):
    import os
 
 # Forzamos la ruta absoluta real de PythonAnywhere
-db_folder = '/home/jverastegui/devices-borrowing-system-v6.1/instance'
+# db_folder = '/home/jverastegui/devices-borrowing-system-v6.1/instance'
+db_folder = instance_path
 db_path = os.path.join(db_folder, 'laptops.db')
 
 # Aseguramos que la carpeta exista físicamente
@@ -35,7 +36,7 @@ if not os.path.exists(db_folder):
 
 # Configuramos la base de datos
 # 1. Obtenemos la ruta limpia primero (fuera de la f-string)
-clean_path = default_db_path.replace('\\', '/')
+clean_path = db_path.replace('\\', '/')
 
 # 2. Se la pasamos a la configuración
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{clean_path}"
