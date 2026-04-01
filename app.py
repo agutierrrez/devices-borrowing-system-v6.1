@@ -36,8 +36,10 @@ db_path = os.path.join(instance_path, 'laptops.db')
 # 4. Limpiamos la ruta para que use slashes / (importante para Windows/Linux interoperabilidad)
 clean_path = db_path.replace('\\', '/')
 
-# 5. Configuración de SQLAlchemy (Usamos 4 slashes para ruta absoluta en Linux)
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:////{clean_path}"
+# 5. Configuración de SQLAlchemy
+# - En Windows con camino C:/... use 3 slashes en URI: sqlite:///C:/path/to/db
+# - Usar sqlalchemy en modo pysqlite a nivel de cadena (opcional) para compatibilidad.
+app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{clean_path}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret')
 
@@ -51,9 +53,9 @@ class Laptop(db.Model):
     name = db.Column(db.String(50), unique=True, nullable=False)
     is_borrowed = db.Column(db.Boolean, default=False, nullable=False)
     borrower = db.Column(db.String(100), nullable=True)
-    borrowed_at = db.Column(db.DateTime, nullable=True)
+    borrowed_at = db.Column(db.DateTime(timezone=True), nullable=True)
     borrower_email = db.Column(db.String(200), nullable=True)
-    due_date = db.Column(db.DateTime, nullable=True)
+    due_date = db.Column(db.DateTime(timezone=True), nullable=True)
 
     def __repr__(self):
         return f'<Laptop {self.name}>'
@@ -66,8 +68,8 @@ class BorrowHistory(db.Model):
     laptop = db.relationship('Laptop')
     borrower = db.Column(db.String(100), nullable=False)
     borrower_email = db.Column(db.String(200), nullable=True)
-    borrowed_at = db.Column(db.DateTime, nullable=False)
-    returned_at = db.Column(db.DateTime, nullable=True)
+    borrowed_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    returned_at = db.Column(db.DateTime(timezone=True), nullable=True)
     observation = db.Column(db.Text, nullable=True)
     requested_days = db.Column(db.Integer, nullable=True)
 
@@ -83,8 +85,8 @@ class OtherDevice(db.Model):
     is_borrowed = db.Column(db.Boolean, default=False, nullable=False)
     borrower = db.Column(db.String(100), nullable=True)
     borrower_email = db.Column(db.String(200), nullable=True)
-    borrowed_at = db.Column(db.DateTime, nullable=True)
-    due_date = db.Column(db.DateTime, nullable=True)
+    borrowed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    due_date = db.Column(db.DateTime(timezone=True), nullable=True)
 
     def __repr__(self):
         return f'<OtherDevice {self.name}>'
@@ -97,39 +99,48 @@ class OtherDeviceHistory(db.Model):
     device = db.relationship('OtherDevice')
     borrower = db.Column(db.String(100), nullable=False)
     borrower_email = db.Column(db.String(200), nullable=True)
-    borrowed_at = db.Column(db.DateTime, nullable=False)
-    returned_at = db.Column(db.DateTime, nullable=True)
+    borrowed_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    returned_at = db.Column(db.DateTime(timezone=True), nullable=True)
     observation = db.Column(db.Text, nullable=True)
     requested_days = db.Column(db.Integer, nullable=True)
 
     def __repr__(self):
         return f'<OtherDeviceHistory {self.device.name} by {self.borrower}>'
 
+def ensure_local_tz(dt):
+    if not dt:
+        return None
+    if isinstance(dt, datetime):
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=LIMA)
+        return dt.astimezone(LIMA)
+    return dt
+
 @app.template_filter('datetimeformat')
 def datetimeformat(value):
     if not value:
         return '-'
-    # If a datetime/date object is passed, format to YYYY-MM-DD
-    try:
-        from datetime import date
-        if isinstance(value, (date,)):
-            return value.isoformat()
-    except Exception:
-        pass
-    # Fallback: handle ISO-like strings
-    try:
-        return value.split('T')[0]
-    except Exception:
-        return str(value)
+    from datetime import date, datetime as datetime_cls
+    if isinstance(value, datetime_cls):
+        local_dt = ensure_local_tz(value)
+        return local_dt.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, str):
+        try:
+            return value.split('T')[0]
+        except Exception:
+            return value
+    return str(value)
 
 @app.route('/')
 def index():
     laptops = Laptop.query.order_by(Laptop.id).all()
-    now = datetime.now(LIMA).replace(tzinfo=None)
+    now = datetime.now(LIMA)
     items = []
     for l in laptops:
-        due = getattr(l, 'due_date', None)
-        due_str = due.strftime('%Y-%m-%d') if due else None
+        due = ensure_local_tz(getattr(l, 'due_date', None))
+        due_str = due.date().isoformat() if due else None
         is_overdue = bool(l.is_borrowed and due and due < now)
         days_remaining = None
         days_text = None
@@ -187,30 +198,31 @@ def borrow(laptop_id):
             flash('Please provide your name to borrow a laptop.', 'danger')
             return redirect(request.url)
         
-        # Check if this borrower already has an active borrowed laptop
+        # Check if this borrower already has an active borrowed laptop (exact normalized match)
         existing_borrow = Laptop.query.filter_by(is_borrowed=True).filter(
-            Laptop.borrower.ilike(f'%{name}%')
+            func.lower(func.trim(Laptop.borrower)) == name.lower()
         ).first()
         if existing_borrow:
             flash(f'You already have {existing_borrow.name} borrowed. Please return it before borrowing another laptop.', 'warning')
             return redirect(request.url)
-        
+
         laptop.is_borrowed = True
         laptop.borrower = name
         laptop.borrower_email = email or None
-        # store naive local (Lima) time in DB for compatibility
-        laptop.borrowed_at = datetime.now(LIMA).replace(tzinfo=None)
+        laptop.borrowed_at = datetime.now(LIMA)
+
         try:
             requested_days = int(days) if days else 7
         except ValueError:
             flash('Invalid number of days; using default 7.', 'warning')
             requested_days = 7
+
         if requested_days < 0 or requested_days > 365:
             flash('Requested days must be between 0 and 365.', 'danger')
-            return redirect(request.url)
+            return render_template('borrow.html', laptop=laptop, name=name, email=email, days=days)
+
         laptop.due_date = laptop.borrowed_at + timedelta(days=requested_days)
-        db.session.commit()
-        
+
         # Also create a BorrowHistory record for analytics
         history = BorrowHistory(
             laptop_id=laptop.id,
@@ -220,9 +232,10 @@ def borrow(laptop_id):
             returned_at=None,
             requested_days=requested_days
         )
+
         db.session.add(history)
         db.session.commit()
-        
+
         flash(f'{laptop.name} borrowed by {name}.', 'success')
         return redirect(url_for('index'))
     return render_template('borrow.html', laptop=laptop)
@@ -243,9 +256,9 @@ def return_laptop(laptop_id):
     ).order_by(BorrowHistory.id.desc()).first()
     
     if active_history:
-        active_history.returned_at = datetime.now(LIMA).replace(tzinfo=None)
+        active_history.returned_at = datetime.now(LIMA)
         db.session.add(active_history)
-    
+
     laptop.is_borrowed = False
     laptop.borrower = None
     laptop.borrowed_at = None
@@ -259,10 +272,10 @@ def return_laptop(laptop_id):
 @app.route('/active-loans')
 def active_loans():
     laptops = Laptop.query.filter_by(is_borrowed=True).order_by(Laptop.id).all()
-    now = datetime.now(LIMA).replace(tzinfo=None)
+    now = datetime.now(LIMA)
     enriched = []
     for l in laptops:
-        due = getattr(l, 'due_date', None)
+        due = ensure_local_tz(getattr(l, 'due_date', None))
         days_remaining = None
         days_text = None
         days_badge = None
@@ -290,8 +303,8 @@ def active_loans():
             'name': l.name,
             'borrower': l.borrower,
             'borrower_email': getattr(l, 'borrower_email', None),
-            'borrowed_at': l.borrowed_at,
-            'due_date': l.due_date.isoformat() if getattr(l, 'due_date', None) else None,
+            'borrowed_at': ensure_local_tz(l.borrowed_at),
+            'due_date': due.isoformat() if due else None,
             'days_remaining': days_remaining,
             'days_text': days_text,
             'days_badge': days_badge,
@@ -417,16 +430,16 @@ def other_manage(device_id):
                 return redirect(request.url)
             existing = None
             if email:
-                existing = OtherDevice.query.filter(OtherDevice.is_borrowed == True).filter(OtherDevice.borrower_email.ilike(email)).first()
+                existing = OtherDevice.query.filter(OtherDevice.is_borrowed == True).filter(func.lower(func.trim(OtherDevice.borrower_email)) == email.lower()).first()
             if not existing:
-                existing = OtherDevice.query.filter(OtherDevice.is_borrowed == True).filter(OtherDevice.borrower.ilike(name)).first()
+                existing = OtherDevice.query.filter(OtherDevice.is_borrowed == True).filter(func.lower(func.trim(OtherDevice.borrower)) == name.lower()).first()
             if existing:
                 flash('You already have a borrowed device (return it before borrowing another).', 'warning')
                 return redirect(request.url)
             device.is_borrowed = True
             device.borrower = name
             device.borrower_email = email or None
-            device.borrowed_at = datetime.now(LIMA).replace(tzinfo=None)
+            device.borrowed_at = datetime.now(LIMA)
             try:
                 requested_days = int(days) if days else 7
             except ValueError:
