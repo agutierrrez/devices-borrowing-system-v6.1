@@ -12,37 +12,57 @@
         <h1>Other Devices</h1>
         <img src="/static/images/logoc.png" alt="Logo" class="logo">
       </div>
-      <div class="actions">
-        <a class="btn" href="/other-devices/add">Add device</a>
-        <a class="btn" href="/other-devices/borrowed" style="margin-left:8px">Return Device</a>
-        <a class="btn" href="/other-devices/status" style="margin-left:8px">Show borrow status</a>
-        <a class="btn" href="/" style="margin-left:8px;background:#ffeb3b;color:#000">Main</a>
+      <div class="auth-status">
+        {% if session.user_id %}
+          <span>Logged in as <strong>{{ session.username }}</strong></span>
+          <a class="btn" href="/logout" style="margin-left: 16px;">Logout</a>
+        {% else %}
+          <a class="btn" href="/login">Admin Login</a>
+        {% endif %}
       </div>
+
+  <div class="actions">
+    <a class="btn" href="/other-devices/add">Add Device</a>
+    <a class="btn" href="/other-devices/borrowed" style="margin-left:8px">Active Loans</a>
+    <a class="btn" href="/analytics" style="margin-left:8px;background:#4caf50">Analytics</a>
+    <a class="btn" href="/" style="margin-left:8px;background:#ffeb3b;color:#000">Main</a>
+  </div>
       <table>
-        <thead><tr><th>Device</th><th>Category</th><th>Status</th><th>Action</th></tr></thead>
+        <thead>
+          <tr><th>Device</th><th>Status</th><th>Action</th><th>Comments</th></tr>
+        </thead>
         <tbody>
         {% for d in devices %}
           <tr>
             <td>{{ d.name }}</td>
-            <td>{{ d.category or '-' }}</td>
             <td>
               {% if d.is_borrowed %}
-                Borrowed by {{ d.borrower }}
-                {% if d.due_date %}<br/>Due: {{ d.due_date }}{% endif %}
+                Borrowed by {{ d.borrower }}<br />
+                {% if d.days_text %}
+                  <span class="badge {{ d.days_badge }}">{{ d.days_text }}</span>
+                {% elif d.due_date %}
+                  Due: {{ d.due_date }}
+                {% endif %}
               {% else %}
                 Available
               {% endif %}
             </td>
             <td>
+              {% if session.user_id %}
+                <a class="btn" href="/edit-comment-other/{{ d.id }}" style="margin-right: 8px;">Edit Comment</a>
+              {% endif %}
               {% if d.is_borrowed %}
                 <a class="btn" href="/other-devices/manage/{{ d.id }}">Return</a>
               {% else %}
                 <a class="btn" href="/other-devices/manage/{{ d.id }}">Borrow</a>
-                <form method="post" action="/other-devices/delete/{{ d.id }}" style="display:inline;margin-left:6px;" onsubmit="return confirm('Delete device {{ d.name }}? This cannot be undone.');">
-                  <button type="submit" class="btn danger">Delete</button>
-                </form>
+                {% if session.user_id %}
+                  <form method="post" action="/other-devices/delete/{{ d.id }}" style="display:inline;margin-left:6px;" onsubmit="return confirm('Delete device {{ d.name }}? This cannot be undone.');">
+                    <button type="submit" class="btn danger">Delete</button>
+                  </form>
+                {% endif %}
               {% endif %}
             </td>
+            <td>{{ d.comments or '' }}</td>
           </tr>
         {% endfor %}
         </tbody>

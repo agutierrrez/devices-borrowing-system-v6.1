@@ -23,6 +23,11 @@ app.config['REQUIRE_BORROWER_EMAIL'] = os.environ.get('REQUIRE_BORROWER_EMAIL', 
 app.config['ENV'] = os.environ.get('FLASK_ENV', 'development')
 app.config['DEBUG'] = os.environ.get('FLASK_DEBUG', '0') == '1'
 
+# Session configuration for security
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)  # Auto logout after 8 hours
+
 # Peru / Lima timezone helper used across the package
 try:
 	from zoneinfo import ZoneInfo

@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, session
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func, desc
 from datetime import datetime, timezone, timedelta
+from werkzeug.security import generate_password_hash, check_password_hash
 import math
 import os
 
@@ -56,6 +57,7 @@ class Laptop(db.Model):
     borrowed_at = db.Column(db.DateTime(timezone=True), nullable=True)
     borrower_email = db.Column(db.String(200), nullable=True)
     due_date = db.Column(db.DateTime(timezone=True), nullable=True)
+    comments = db.Column(db.Text, nullable=True)
 
     def __repr__(self):
         return f'<Laptop {self.name}>'
@@ -87,6 +89,7 @@ class OtherDevice(db.Model):
     borrower_email = db.Column(db.String(200), nullable=True)
     borrowed_at = db.Column(db.DateTime(timezone=True), nullable=True)
     due_date = db.Column(db.DateTime(timezone=True), nullable=True)
+    comments = db.Column(db.Text, nullable=True)
 
     def __repr__(self):
         return f'<OtherDevice {self.name}>'
@@ -106,6 +109,23 @@ class OtherDeviceHistory(db.Model):
 
     def __repr__(self):
         return f'<OtherDeviceHistory {self.device.name} by {self.borrower}>'
+
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def __repr__(self):
+        return f'<User {self.username}>'
+
 
 def ensure_local_tz(dt):
     if not dt:
@@ -175,6 +195,7 @@ def index():
             'days_remaining': days_remaining,
             'days_text': days_text,
             'days_badge': days_badge,
+            'comments': getattr(l, 'comments', None),
         })
     return render_template('index.html', items=items)
 
@@ -269,6 +290,100 @@ def return_laptop(laptop_id):
     return redirect(url_for('index'))
 
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        if not username or not password:
+            flash('Username and password are required.', 'danger')
+            return redirect(url_for('login'))
+
+        user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password) and user.is_admin:
+            session['user_id'] = user.id
+            session['username'] = user.username
+            session.permanent = True
+            flash(f'Welcome back, {user.username}!', 'success')
+            return redirect(url_for('index'))
+
+        flash('Invalid username or password.', 'danger')
+        return redirect(url_for('login'))
+
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    session.pop('username', None)
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('index'))
+
+
+@app.route('/edit-comment/<int:laptop_id>', methods=['GET', 'POST'])
+def edit_comment(laptop_id):
+    if 'user_id' not in session:
+        flash('Admin login required to edit comments.', 'danger')
+        return redirect(url_for('login'))
+
+    laptop = db.session.get(Laptop, laptop_id)
+    if laptop is None:
+        abort(404)
+
+    if request.method == 'POST':
+        comment = request.form.get('comment', '').strip()
+        laptop.comments = comment if comment else None
+        db.session.commit()
+        flash('Comment updated successfully.', 'success')
+        return redirect(url_for('index'))
+
+    return render_template('edit_comment.html', laptop=laptop)
+
+
+@app.route('/delete/<int:laptop_id>', methods=['POST'])
+def delete_laptop(laptop_id):
+    if 'user_id' not in session:
+        flash('Admin login required to delete devices.', 'danger')
+        return redirect(url_for('login'))
+
+    laptop = db.session.get(Laptop, laptop_id)
+    if laptop is None:
+        abort(404)
+
+    if laptop.is_borrowed:
+        flash('Cannot delete a laptop that is currently borrowed.', 'warning')
+        return redirect(url_for('index'))
+
+    # Remove history records for the deleted laptop to avoid orphaned references.
+    BorrowHistory.query.filter_by(laptop_id=laptop.id).delete()
+    name = laptop.name
+    db.session.delete(laptop)
+    db.session.commit()
+    flash(f'{name} deleted.', 'success')
+    return redirect(url_for('index'))
+
+
+@app.route('/edit-comment-other/<int:device_id>', methods=['GET', 'POST'])
+def edit_comment_other(device_id):
+    if 'user_id' not in session:
+        flash('Admin login required to edit comments.', 'danger')
+        return redirect(url_for('login'))
+
+    device = db.session.get(OtherDevice, device_id)
+    if device is None:
+        abort(404)
+
+    if request.method == 'POST':
+        comment = request.form.get('comment', '').strip()
+        device.comments = comment if comment else None
+        db.session.commit()
+        flash('Comment updated successfully.', 'success')
+        return redirect(url_for('other_devices_menu'))
+
+    return render_template('edit_comment_other.html', device=device)
+
+
 @app.route('/active-loans')
 def active_loans():
     laptops = Laptop.query.filter_by(is_borrowed=True).order_by(Laptop.id).all()
@@ -361,9 +476,51 @@ def analytics():
 # --- Other devices routes (borrow/return/manage other equipment) ---
 @app.route('/other-devices')
 def other_devices_menu():
-    # show available devices for borrowing by default
-    devices = OtherDevice.query.filter_by(is_borrowed=False).order_by(OtherDevice.id).all()
-    return render_template('other_list.html', devices=devices)
+    # show all devices (both available and borrowed) like the main dashboard
+    devices = OtherDevice.query.order_by(OtherDevice.id).all()
+    now = datetime.now(LIMA)
+    items = []
+    for d in devices:
+        due = ensure_local_tz(getattr(d, 'due_date', None))
+        due_str = due.date().isoformat() if due else None
+        is_overdue = bool(d.is_borrowed and due and due < now)
+        days_remaining = None
+        days_text = None
+        days_badge = None
+        if d.is_borrowed and due:
+            secs = (due - now).total_seconds()
+            if secs > 0:
+                days_remaining = math.ceil(secs / 86400)
+            else:
+                days_remaining = -math.ceil(abs(secs) / 86400)
+            if days_remaining > 1:
+                days_text = f"{days_remaining} days left"
+                days_badge = 'orange'
+            elif days_remaining == 1:
+                days_text = '1 day left'
+                days_badge = 'orange'
+            elif days_remaining == 0:
+                days_text = 'Due today'
+                days_badge = 'orange'
+            else:
+                od = abs(days_remaining)
+                days_text = 'Overdue by 1 day' if od == 1 else f'Overdue by {od} days'
+                days_badge = 'red'
+        items.append({
+            'id': d.id,
+            'name': d.name,
+            'category': d.category,
+            'is_borrowed': d.is_borrowed,
+            'borrower': d.borrower,
+            'borrower_email': getattr(d, 'borrower_email', None),
+            'due_date': due_str,
+            'is_overdue': is_overdue,
+            'days_remaining': days_remaining,
+            'days_text': days_text,
+            'days_badge': days_badge,
+            'comments': getattr(d, 'comments', None),
+        })
+    return render_template('other_list.html', devices=items)
 
 
 @app.route('/other-devices/add', methods=['GET', 'POST'])
@@ -465,6 +622,10 @@ def other_manage(device_id):
 
 @app.route('/other-devices/delete/<int:device_id>', methods=['POST'])
 def other_delete(device_id):
+    if 'user_id' not in session:
+        flash('Admin login required to delete devices.', 'danger')
+        return redirect(url_for('login'))
+
     device = db.session.get(OtherDevice, device_id)
     if device is None:
         abort(404)

@@ -8,9 +8,19 @@
   </head>
   <body>
     <main class="container">
-      <div class="header-with-logo">
-        <h1>Device Borrowing System</h1>
-        <img src="/static/images/logoc.png" alt="Logo" class="logo">
+      <div class="header-top">
+        <div class="header-left">
+          <h1>Device Borrowing System</h1>
+          <img src="/static/images/logoc.png" alt="Logo" class="logo">
+        </div>
+        <div class="auth-status">
+          {% if session.user_id %}
+            <span>Logged in as <strong>{{ session.username }}</strong></span>
+            <a class="btn" href="/logout" style="margin-left: 16px;">Logout</a>
+          {% else %}
+            <a class="btn" href="/login">Admin Login</a>
+          {% endif %}
+        </div>
       </div>
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -29,7 +39,7 @@
   </div>
       <table>
         <thead>
-          <tr><th>Device</th><th>Status</th><th>Action</th></tr>
+          <tr><th>Device</th><th>Status</th><th>Action</th><th>Comments</th></tr>
         </thead>
         <tbody>
         {% for l in items %}
@@ -48,6 +58,14 @@
               {% endif %}
             </td>
             <td>
+              {% if session.user_id %}
+                <a class="btn" href="/edit-comment/{{ l.id }}" style="margin-right: 8px;">Edit Comment</a>
+                {% if not l.is_borrowed %}
+                  <form method="post" action="/delete/{{ l.id }}" style="display:inline;margin-left:6px;" onsubmit="return confirm('Delete device {{ l.name }}? This cannot be undone.');">
+                    <button type="submit" class="btn danger">Delete</button>
+                  </form>
+                {% endif %}
+              {% endif %}
               {% if l.is_borrowed %}
                 <form method="post" action="/return/{{ l.id }}">
                   <button type="submit">Return</button>
@@ -56,6 +74,7 @@
                 <a class="btn" href="/borrow/{{ l.id }}">Borrow</a>
               {% endif %}
             </td>
+            <td>{{ l.comments or '' }}</td>
           </tr>
         {% endfor %}
         </tbody>

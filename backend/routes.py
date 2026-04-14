@@ -1,6 +1,6 @@
-from flask import render_template, request, redirect, url_for, flash, abort
+from flask import render_template, request, redirect, url_for, flash, abort, session
 from . import app, db, LIMA
-from .models import Laptop, BorrowHistory, OtherDevice, OtherDeviceHistory
+from .models import Laptop, BorrowHistory, OtherDevice, OtherDeviceHistory, User
 from datetime import datetime, timedelta
 import math
 from sqlalchemy import func
@@ -56,6 +56,7 @@ def index():
             'days_remaining': days_remaining,
             'days_text': days_text,
             'days_badge': days_badge,
+            'comments': l.comments,
         })
     return render_template('index.html', items=items)
 
@@ -459,6 +460,56 @@ def analytics():
     top_borrowers = [{'borrower': b, 'count': c} for b, c in top_borrowers]
 
     return render_template('analytics.html', total_borrows=total_borrows, avg_duration_days=round(avg_duration_days, 1) if avg_duration_days else None, top_borrowers=top_borrowers)
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if not username or not password:
+            flash('Username and password are required.', 'danger')
+            return redirect(url_for('login'))
+        
+        user = User.query.filter_by(username=username).first()
+        if user and user.check_password(password) and user.is_admin:
+            session['user_id'] = user.id
+            session['username'] = user.username
+            flash(f'Welcome back, {user.username}!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid username or password.', 'danger')
+            return redirect(url_for('login'))
+    
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    session.pop('username', None)
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('index'))
+
+
+@app.route('/edit-comment/<int:laptop_id>', methods=['GET', 'POST'])
+def edit_comment(laptop_id):
+    # Check if user is logged in as admin
+    if 'user_id' not in session:
+        flash('You must be logged in as an admin to edit comments.', 'danger')
+        return redirect(url_for('login'))
+    
+    laptop = Laptop.query.get_or_404(laptop_id)
+    
+    if request.method == 'POST':
+        comment = request.form.get('comment', '').strip()
+        laptop.comments = comment if comment else None
+        db.session.commit()
+        flash('Comment updated successfully.', 'success')
+        return redirect(url_for('index'))
+    
+    return render_template('edit_comment.html', laptop=laptop)
 
 
 # history route removed to revert to previous state
